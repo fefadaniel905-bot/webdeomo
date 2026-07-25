@@ -843,6 +843,42 @@ const categories = [
     note: "Benji Auto Repair is a real allinone trust client, used the same way as Kings Loox Zone."
   },
   {
+    id: 'transport', icon: '🚐', title: 'Transport',
+    desc: 'Taxis, shuttles, courier rides', status: 'plan', statusLabel: 'Planned',
+    listings: [
+      {name:'Sample Shuttle Service', loc:'Rundu, Kavango East', price:'Town & cross-region trips', kind:'placeholder', icon:'🚐'},
+      {name:'Sample Taxi Rank', loc:'Windhoek, Khomas', price:'Local taxi bookings', kind:'placeholder', icon:'🚕'},
+    ],
+    note: "New category — no real transport clients yet. Shown as sample layout only."
+  },
+  {
+    id: 'construction', icon: '🏗️', title: 'Construction',
+    desc: 'Builders, contractors, artisans', status: 'plan', statusLabel: 'Planned',
+    listings: [
+      {name:'Sample Building Contractor', loc:'Rundu, Kavango East', price:'Quotes on request', kind:'placeholder', icon:'👷'},
+      {name:'Sample Plumbing & Electrical', loc:'Ongwediva, Oshana', price:'Quotes on request', kind:'placeholder', icon:'🔌'},
+    ],
+    note: "New category — no real construction clients yet. Shown as sample layout only."
+  },
+  {
+    id: 'materials', icon: '🧱', title: 'Building Materials',
+    desc: 'Hardware, cement, timber, fittings', status: 'plan', statusLabel: 'Planned',
+    listings: [
+      {name:'Sample Hardware & Cement', loc:'Rundu, Kavango East', price:'Menu & prices on page', kind:'placeholder', icon:'🧱'},
+      {name:'Sample Timber & Fittings', loc:'Grootfontein, Otjozondjupa', price:'Menu & prices on page', kind:'placeholder', icon:'🪵'},
+    ],
+    note: "New category — no real building materials clients yet. Shown as sample layout only."
+  },
+  {
+    id: 'leisure', icon: '🎉', title: 'Leisure & Entertainment',
+    desc: 'Lodges, events, sports, fun spots', status: 'plan', statusLabel: 'Planned',
+    listings: [
+      {name:'Sample Event Venue', loc:'Rundu, Kavango East', price:'Bookings on request', kind:'placeholder', icon:'🎪'},
+      {name:'Sample Sports Bar', loc:'Swakopmund, Erongo', price:'Menu & prices on page', kind:'placeholder', icon:'🍻'},
+    ],
+    note: "New category — no real leisure clients yet. Shown as sample layout only."
+  },
+  {
     id: 'delivery', icon: '🚚', title: 'Delivery & Logistics',
     desc: 'Order delivery across town', status: 'plan', statusLabel: 'Planned',
     listings: [
@@ -873,8 +909,10 @@ const quickCats = [
   {label:'🍽️ Food', match:['food']},
   {label:'💈 Beauty', match:['beauty']},
   {label:'🛍️ Shops', match:['shops']},
-  {label:'🔧 Services', match:['engineering','auto','delivery']},
+  {label:'🔧 Services', match:['engineering','auto','delivery','transport']},
+  {label:'🏗️ Build', match:['construction','materials']},
   {label:'🏠 Stays', match:['accommodation']},
+  {label:'🎉 Leisure', match:['leisure']},
 ];
 const quickCatsEl = document.getElementById('quick-cats');
 quickCats.forEach(qc => {
