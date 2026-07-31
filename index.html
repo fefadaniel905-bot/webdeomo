@@ -353,6 +353,47 @@
   .tracker-line{width:2px; flex:1; min-height:16px; background:var(--card-border);}
   .tracker-label{font-size:12.5px; color:var(--gray); padding-bottom:14px;}
   .tracker-label.on{color:var(--white); font-weight:600;}
+
+  /* ---- Availability badges ---- */
+  .avail-badge{
+    display:inline-flex; align-items:center; gap:5px;
+    font-size:11px; font-weight:700; padding:4px 10px; border-radius:99px;
+    margin-top:6px;
+  }
+  .avail-badge.available{background:rgba(34,197,94,.15); color:#4ADE80;}
+  .avail-badge.limited{background:rgba(245,158,11,.15); color:#FBBF24;}
+  .avail-badge.full{background:rgba(239,68,68,.15); color:#F87171;}
+  .avail-note{font-size:10.5px; color:var(--gray); margin-top:5px;}
+
+  /* ---- Other [Category] Nearby (group / overflow) ---- */
+  .biz-nearby{margin-bottom:18px;}
+  .biz-nearby-warn{
+    background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.3); color:#F87171;
+    font-size:12px; font-weight:600; padding:10px 13px; border-radius:12px; margin-bottom:10px;
+  }
+  .biz-nearby-list{display:flex; flex-direction:column; gap:8px;}
+  .biz-nearby-item{
+    display:flex; align-items:center; gap:10px;
+    background:var(--card-bg); border:1px solid var(--card-border); border-radius:12px; padding:10px 12px;
+  }
+  .biz-nearby-item .icon{font-size:20px;}
+  .biz-nearby-item .info{flex:1;}
+  .biz-nearby-item .name{font-size:12.5px; font-weight:700; color:var(--white);}
+  .biz-nearby-item .loc{font-size:10.5px; color:var(--gray); margin-top:1px;}
+
+  /* ---- Town search results ---- */
+  #town-results{display:none;}
+  #town-results.active{display:block;}
+  .town-results-head{padding:4px 4px 14px;}
+  .town-results-head h2{font-size:18px; font-weight:800;}
+  .town-results-head p{font-size:12.5px; color:var(--gray); margin-top:4px;}
+  .town-cat-chips{display:flex; gap:8px; overflow-x:auto; padding-bottom:12px;}
+  .town-cat-chip{
+    flex-shrink:0; font-size:12px; font-weight:600; color:var(--gray-light);
+    background:var(--card-bg); border:1px solid var(--card-border);
+    padding:7px 13px; border-radius:99px;
+  }
+  .town-cat-chip.active{border-color:var(--blue); color:#fff; background:rgba(37,99,235,.15);}
   .biz-order-btn{
     display:flex; align-items:center; justify-content:center; gap:8px;
     background:var(--blue); color:#fff; font-weight:700; font-size:14.5px;
@@ -545,15 +586,15 @@
       <div class="hero-stats">
         <div class="hero-stat"><div class="num">4</div><div class="label">Businesses live</div></div>
         <div class="hero-stat"><div class="num">2</div><div class="label">Regions covered</div></div>
-        <div class="hero-stat"><div class="num">N$250</div><div class="label">To get listed</div></div>
+        <div class="hero-stat"><div class="num">10+</div><div class="label">Categories open</div></div>
       </div>
-      <div class="hero-note">Real numbers, updated as we grow — no inflated stats.</div>
+      <div class="hero-note">Real numbers, updated as we grow — no inflated stats. Pricing confirmed on WhatsApp.</div>
     </div>
 
     <div class="search-bar">
-      <div class="search-field">📍 Where in Namibia?</div>
-      <div class="search-field">🔍 What are you looking for?</div>
-      <div class="search-btn">Search Businesses</div>
+      <select class="field-select" id="search-region"></select>
+      <select class="field-select" id="search-town"></select>
+      <div class="search-btn" id="search-submit-btn">Search Businesses</div>
     </div>
     <div class="quick-cats" id="quick-cats"></div>
 
@@ -579,6 +620,16 @@
     <div class="listing-grid" id="listing-grid"></div>
   </div>
 
+  <div id="town-results">
+    <button class="back-btn" id="town-back-btn">← Back to Homepage</button>
+    <div class="town-results-head">
+      <h2 id="town-results-title"></h2>
+      <p>Businesses across every category in this town.</p>
+    </div>
+    <div class="town-cat-chips" id="town-cat-chips"></div>
+    <div class="listing-grid" id="town-listing-grid"></div>
+  </div>
+
   <div id="business">
     <button class="back-btn" id="biz-back-btn">← Back</button>
     <div class="biz-banner">
@@ -587,6 +638,8 @@
     <div class="biz-head">
       <h2 id="biz-name"></h2>
       <div class="biz-loc" id="biz-loc"></div>
+      <div id="biz-avail-badge"></div>
+      <div class="avail-note" id="biz-avail-note" style="display:none;">Availability is reported by the business, not a live booking system.</div>
     </div>
     <p class="biz-about" id="biz-about"></p>
 
@@ -600,6 +653,12 @@
       <div id="biz-expect-offer"></div>
       <div class="expect-divider" id="biz-expect-divider" style="display:none;"></div>
       <div id="biz-expect-know"></div>
+    </div>
+
+    <div class="biz-nearby" id="biz-nearby" style="display:none;">
+      <div class="biz-nearby-warn" id="biz-nearby-warn" style="display:none;"></div>
+      <div class="section-label" id="biz-nearby-label" style="margin-top:0;">Other Nearby</div>
+      <div class="biz-nearby-list" id="biz-nearby-list"></div>
     </div>
 
     <div class="biz-tracker" id="biz-tracker" style="display:none;">
@@ -763,17 +822,20 @@ const NAMIBIA_REGIONS = {
 const categories = [
   {
     id: 'accommodation', icon: '🏠', title: 'Accommodation',
-    desc: 'Guesthouses, lodges, B&Bs', status: 'soon', statusLabel: 'Coming soon',
+    desc: 'Guesthouses, lodges, B&Bs', status: 'soon', statusLabel: 'Coming soon', availType: 'rooms',
     listings: [
-      {name:'Riverside Guesthouse', loc:'Rundu, Kavango East', price:'N$1,350 total · 3 nights', kind:'placeholder', icon:'🏞️'},
-      {name:'Kavango Lodge', loc:'Rundu, Kavango East', price:'N$620 total · 1 night', kind:'placeholder', icon:'🏞️'},
-      {name:'Hillside B&B', loc:'Rundu, Kavango East', price:'N$540 total · 1 night', kind:'placeholder', icon:'🏞️'},
+      {name:'Riverside Guesthouse', loc:'Rundu, Kavango East', price:'N$1,350 total · 3 nights', kind:'placeholder', icon:'🏞️',
+        availability:{status:'available', detail:'3 rooms available'}},
+      {name:'Kavango Lodge', loc:'Rundu, Kavango East', price:'N$620 total · 1 night', kind:'placeholder', icon:'🏞️',
+        availability:{status:'limited', detail:'1 room left this weekend'}},
+      {name:'Hillside B&B', loc:'Rundu, Kavango East', price:'N$540 total · 1 night', kind:'placeholder', icon:'🏞️',
+        availability:{status:'full', detail:'Fully booked this weekend'}},
     ],
     note: "Week 1–4 build target — self-service listing page, availability calendar, one-tap booking. Cards above show intended layout only."
   },
   {
     id: 'engineering', icon: '🛠️', title: 'Engineering',
-    desc: 'Structural, civil, electrical firms', status: 'soon', statusLabel: 'Coming soon',
+    desc: 'Structural, civil, electrical firms', status: 'soon', statusLabel: 'Coming soon', availType: 'slots',
     listings: [
       {name:'Sample Structural Engineers', loc:'Windhoek', price:'Quotes on request', kind:'placeholder', icon:'📐'},
       {name:'Sample Electrical Contractors', loc:'Rundu, Kavango East', price:'Quotes on request', kind:'placeholder', icon:'⚡'},
@@ -782,16 +844,18 @@ const categories = [
   },
   {
     id: 'shops', icon: '🛍️', title: 'Shops & Trading',
-    desc: 'Retail, online orders via WhatsApp', status: 'live', statusLabel: 'Live today',
+    desc: 'Retail, online orders via WhatsApp', status: 'live', statusLabel: 'Live today', availType: 'stock',
     listings: [
       {name:'Sample Retail Shop', loc:'Rundu, Kavango East', price:'Menu & prices on page', kind:'verified', icon:'🧺',
         about:'Placeholder shop showing how a retail business page looks once listed — products, prices, WhatsApp ordering.',
+        availability:{status:'open', detail:'Open Now'},
         menu:[
           {name:'Product A', price:'N$120', desc:'Sample item'},
           {name:'Product B', price:'N$85', desc:'Sample item'},
         ]},
       {name:'Sample Takeaway', loc:'Windhoek, Khomas', price:'Menu & prices on page', kind:'verified', icon:'🥘',
         about:'Placeholder takeaway showing the same page template used for food businesses.',
+        availability:{status:'closed', detail:'Closed — opens 8AM'},
         menu:[
           {name:'Combo Meal', price:'N$65', desc:'Sample item'},
           {name:'Drink', price:'N$15', desc:'Sample item'},
@@ -801,19 +865,21 @@ const categories = [
   },
   {
     id: 'food', icon: '🍽️', title: 'Food & Dining',
-    desc: 'Restaurants, takeaways', status: 'soon', statusLabel: 'Coming soon',
+    desc: 'Restaurants, takeaways', status: 'soon', statusLabel: 'Coming soon', availType: 'openclosed',
     listings: [
-      {name:'Sample Restaurant', loc:'Rundu, Kavango East', price:'Menu preview on tap', kind:'placeholder', icon:'🍲'},
+      {name:'Sample Restaurant', loc:'Rundu, Kavango East', price:'Menu preview on tap', kind:'placeholder', icon:'🍲',
+        availability:{status:'open', detail:'Open Now'}},
     ],
     note: "Uses the same card template as Shops & Trading, but its own filtered block."
   },
   {
     id: 'beauty', icon: '💈', title: 'Beauty & Barber',
-    desc: 'Salons, barbershops', status: 'live', statusLabel: 'Client example',
+    desc: 'Salons, barbershops', status: 'live', statusLabel: 'Client example', availType: 'slots',
     listings: [
       {name:'Kings Loox Zone', loc:'Rundu, Kavango East', price:'Cuts & styling · Book on WhatsApp', kind:'verified', icon:'✂️',
         about:'A real allinone trust client — checkerboard, barber-pole styling. Fades, cuts and grooming in Rundu.',
         photos:['✂️','🪒','💈'],
+        availability:{status:'available', detail:'Booking slots open today'},
         whatToExpect:['Walk-ins welcome', 'Cash or EFT on site', 'Open 7 days'],
         goodToKnow:['No online booking yet — confirm your slot on WhatsApp', 'Peak hours (Fri/Sat afternoons) may mean a short wait'],
         menu:[
@@ -826,11 +892,12 @@ const categories = [
   },
   {
     id: 'auto', icon: '🔧', title: 'Auto & Repair',
-    desc: 'Mechanics, panel beaters', status: 'live', statusLabel: 'Client example',
+    desc: 'Mechanics, panel beaters', status: 'live', statusLabel: 'Client example', availType: 'slots',
     listings: [
       {name:'Benji Auto Repair', loc:'Rundu, Kavango East', price:'Repairs & servicing · Book on WhatsApp', kind:'verified', icon:'🚘',
         about:'A real allinone trust client — dark industrial, hazard-yellow branding. General repairs and servicing in Rundu.',
         photos:['🚘','🔧','🛠️'],
+        availability:{status:'full', detail:'Fully booked today — try tomorrow'},
         whatToExpect:['Free basic diagnostics with any repair', 'Parts quoted before work starts', 'Cash or EFT on completion'],
         goodToKnow:['Drop-off only — no mobile/on-site repairs yet', 'Same-day turnaround not guaranteed for major jobs'],
         menu:[
@@ -844,7 +911,7 @@ const categories = [
   },
   {
     id: 'transport', icon: '🚐', title: 'Transport',
-    desc: 'Taxis, shuttles, courier rides', status: 'plan', statusLabel: 'Planned',
+    desc: 'Taxis, shuttles, courier rides', status: 'plan', statusLabel: 'Planned', availType: 'slots',
     listings: [
       {name:'Sample Shuttle Service', loc:'Rundu, Kavango East', price:'Town & cross-region trips', kind:'placeholder', icon:'🚐'},
       {name:'Sample Taxi Rank', loc:'Windhoek, Khomas', price:'Local taxi bookings', kind:'placeholder', icon:'🚕'},
@@ -853,7 +920,7 @@ const categories = [
   },
   {
     id: 'construction', icon: '🏗️', title: 'Construction',
-    desc: 'Builders, contractors, artisans', status: 'plan', statusLabel: 'Planned',
+    desc: 'Builders, contractors, artisans', status: 'plan', statusLabel: 'Planned', availType: 'slots',
     listings: [
       {name:'Sample Building Contractor', loc:'Rundu, Kavango East', price:'Quotes on request', kind:'placeholder', icon:'👷'},
       {name:'Sample Plumbing & Electrical', loc:'Ongwediva, Oshana', price:'Quotes on request', kind:'placeholder', icon:'🔌'},
@@ -862,7 +929,7 @@ const categories = [
   },
   {
     id: 'materials', icon: '🧱', title: 'Building Materials',
-    desc: 'Hardware, cement, timber, fittings', status: 'plan', statusLabel: 'Planned',
+    desc: 'Hardware, cement, timber, fittings', status: 'plan', statusLabel: 'Planned', availType: 'stock',
     listings: [
       {name:'Sample Hardware & Cement', loc:'Rundu, Kavango East', price:'Menu & prices on page', kind:'placeholder', icon:'🧱'},
       {name:'Sample Timber & Fittings', loc:'Grootfontein, Otjozondjupa', price:'Menu & prices on page', kind:'placeholder', icon:'🪵'},
@@ -871,7 +938,7 @@ const categories = [
   },
   {
     id: 'leisure', icon: '🎉', title: 'Leisure & Entertainment',
-    desc: 'Lodges, events, sports, fun spots', status: 'plan', statusLabel: 'Planned',
+    desc: 'Lodges, events, sports, fun spots', status: 'plan', statusLabel: 'Planned', availType: 'openclosed',
     listings: [
       {name:'Sample Event Venue', loc:'Rundu, Kavango East', price:'Bookings on request', kind:'placeholder', icon:'🎪'},
       {name:'Sample Sports Bar', loc:'Swakopmund, Erongo', price:'Menu & prices on page', kind:'placeholder', icon:'🍻'},
@@ -968,6 +1035,33 @@ function renderTowns(regionName){
   });
 }
 
+function availBadgeHTML(av){
+  if(!av) return '';
+  const cls = (av.status === 'available' || av.status === 'open' || av.status === 'in_stock') ? 'available'
+            : (av.status === 'limited') ? 'limited' : 'full';
+  const dot = cls === 'available' ? '🟢' : cls === 'limited' ? '🟡' : '🔴';
+  return `<div class="avail-badge ${cls}">${dot} ${av.detail}</div>`;
+}
+
+function makeListingCard(cat, item){
+  const card = document.createElement('div');
+  card.className = 'listing-card';
+  const isVerified = item.kind === 'verified';
+  card.innerHTML = `
+    <div class="listing-photo ${isVerified ? '' : 'soon'}">${item.icon}</div>
+    <div class="listing-body">
+      <h4>${item.name}</h4>
+      <div class="listing-loc">${item.loc}</div>
+      ${availBadgeHTML(item.availability)}
+      <span class="${isVerified ? 'badge-verified' : 'badge-placeholder'}">${isVerified ? '✓ Verified' : 'Sample layout'}</span>
+      <div class="listing-price">${item.price}</div>
+      <a class="listing-cta ${isVerified ? '' : 'ghost'}">${isVerified ? 'View shop' : 'Notify me'}</a>
+    </div>
+  `;
+  card.addEventListener('click', () => openBusiness(cat, item));
+  return card;
+}
+
 function openCategory(id){
   const cat = categories.find(c => c.id === id);
   detailTitle.innerHTML = `${cat.icon} ${cat.title}`;
@@ -990,21 +1084,7 @@ function openCategory(id){
 
   listingGrid.innerHTML = '';
   cat.listings.forEach(item => {
-    const card = document.createElement('div');
-    card.className = 'listing-card';
-    const isVerified = item.kind === 'verified';
-    card.innerHTML = `
-      <div class="listing-photo ${isVerified ? '' : 'soon'}">${item.icon}</div>
-      <div class="listing-body">
-        <h4>${item.name}</h4>
-        <div class="listing-loc">${item.loc}</div>
-        <span class="${isVerified ? 'badge-verified' : 'badge-placeholder'}">${isVerified ? '✓ Verified' : 'Sample layout'}</span>
-        <div class="listing-price">${item.price}</div>
-        <a class="listing-cta ${isVerified ? '' : 'ghost'}">${isVerified ? 'View shop' : 'Notify me'}</a>
-      </div>
-    `;
-    card.addEventListener('click', () => openBusiness(cat, item));
-    listingGrid.appendChild(card);
+    listingGrid.appendChild(makeListingCard(cat, item));
   });
 
   const note = document.createElement('div');
@@ -1030,6 +1110,8 @@ const bizBackBtn = document.getElementById('biz-back-btn');
 const bizLogo = document.getElementById('biz-logo');
 const bizName = document.getElementById('biz-name');
 const bizLoc = document.getElementById('biz-loc');
+const bizAvailBadge = document.getElementById('biz-avail-badge');
+const bizAvailNote = document.getElementById('biz-avail-note');
 const bizAbout = document.getElementById('biz-about');
 const bizMenuLabel = document.getElementById('biz-menu-label');
 const bizMenu = document.getElementById('biz-menu');
@@ -1038,6 +1120,10 @@ const bizExpect = document.getElementById('biz-expect');
 const bizExpectOffer = document.getElementById('biz-expect-offer');
 const bizExpectDivider = document.getElementById('biz-expect-divider');
 const bizExpectKnow = document.getElementById('biz-expect-know');
+const bizNearby = document.getElementById('biz-nearby');
+const bizNearbyWarn = document.getElementById('biz-nearby-warn');
+const bizNearbyLabel = document.getElementById('biz-nearby-label');
+const bizNearbyList = document.getElementById('biz-nearby-list');
 const bizTracker = document.getElementById('biz-tracker');
 const bizTrackerSteps = document.getElementById('biz-tracker-steps');
 const bizPayment = document.querySelector('.biz-payment');
@@ -1049,6 +1135,8 @@ function openBusiness(cat, item){
   bizLogo.textContent = item.icon;
   bizName.textContent = item.name;
   bizLoc.textContent = `${cat.icon} ${cat.title} · ${item.loc}`;
+  bizAvailBadge.innerHTML = availBadgeHTML(item.availability);
+  bizAvailNote.style.display = item.availability ? 'block' : 'none';
   bizAbout.textContent = item.about || `Placeholder page for a ${cat.title.toLowerCase()} business. Once listed, the owner fills this in themselves from their dashboard.`;
 
   // ---- Photo gallery ----
@@ -1123,6 +1211,46 @@ function openBusiness(cat, item){
     }
   } else {
     bizExpect.style.display = 'none';
+  }
+
+  // ---- Group framing / auto-referral overflow ----
+  // Same category, same town first — falls back to same category, any town, if the town has no other listings.
+  const currentTown = (item.loc || '').split(',')[0].trim();
+  let siblings = cat.listings.filter(l => l !== item && (l.loc || '').split(',')[0].trim() === currentTown);
+  let sameTownOnly = true;
+  if(!siblings.length){
+    siblings = cat.listings.filter(l => l !== item);
+    sameTownOnly = false;
+  }
+  siblings = siblings.slice(0, 5);
+  const isFullOrClosed = item.availability && (item.availability.status === 'full' || item.availability.status === 'closed');
+  if(siblings.length){
+    bizNearby.style.display = 'block';
+    if(isFullOrClosed){
+      bizNearbyWarn.style.display = 'block';
+      bizNearbyWarn.textContent = `${item.name} is showing ${item.availability.detail.toLowerCase()} right now — here are other ${cat.title.toLowerCase()} options${sameTownOnly ? ' nearby' : ''}.`;
+      bizNearbyLabel.textContent = `Try These Instead`;
+    } else {
+      bizNearbyWarn.style.display = 'none';
+      bizNearbyLabel.textContent = sameTownOnly ? `Other ${cat.title} Nearby` : `Other ${cat.title} in Namibia`;
+    }
+    bizNearbyList.innerHTML = '';
+    siblings.forEach(sib => {
+      const row = document.createElement('div');
+      row.className = 'biz-nearby-item';
+      row.innerHTML = `
+        <div class="icon">${sib.icon}</div>
+        <div class="info">
+          <div class="name">${sib.name}</div>
+          <div class="loc">${sib.loc}</div>
+        </div>
+        ${availBadgeHTML(sib.availability)}
+      `;
+      row.addEventListener('click', () => openBusiness(cat, sib));
+      bizNearbyList.appendChild(row);
+    });
+  } else {
+    bizNearby.style.display = 'none';
   }
 
   // ---- Order status tracker (illustrative only — no live order state yet) ----
@@ -1326,7 +1454,7 @@ const FAQ = [
   { keywords: ['how does it work', 'how it works', 'how do i order', 'how to order'],
     answer: "Browse a category, open a business page, and tap 'Order on WhatsApp.' You chat directly with the business — allinone trust never handles the payment or the order itself." },
   { keywords: ['price', 'cost', 'how much', 'fee', 'n$'],
-    answer: "It's N$250 once to get listed and verified, plus N$50/month to stay active. A 'Featured' spot (shown first in your category) is N$150–200." },
+    answer: "There's a one-time listing fee plus a small monthly fee to stay active, and an optional 'Featured' upgrade to be shown first in your category. Exact current pricing is confirmed directly — message us on WhatsApp: 085 7758 227." },
   { keywords: ['list my business', 'join', 'sign up', 'add my business', 'get listed'],
     answer: "Tap 'List Your Business' at the top of the page — it's a quick 3-step form: business basics, location, then contact details. We review and get you live." },
   { keywords: ['pay', 'payment', 'cash', 'eft', 'card'],
@@ -1338,7 +1466,7 @@ const FAQ = [
   { keywords: ['real', 'legit', 'trust', 'genuine', 'scam'],
     answer: "allinone trust is run under 905 Company from Rundu. Kings Loox Zone and Benji Auto Repair are real, live clients you can see in the directory right now." },
   { keywords: ['featured', 'trending', 'top'],
-    answer: "'Featured' businesses are shown first in their category for N$150–200. It's optional — regular listings are always included at the base N$250 + N$50/month." },
+    answer: "'Featured' businesses are shown first in their category for an additional monthly fee. It's optional — regular listings are always included in the base plan. Message us on WhatsApp for current pricing: 085 7758 227." },
 ];
 
 const faqBubble = document.getElementById('faq-bubble');
@@ -1399,6 +1527,106 @@ function faqSend(){
 }
 document.getElementById('faq-send-btn').addEventListener('click', faqSend);
 faqInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') faqSend(); });
+
+// ---- Town/Location search (cross-category) ----
+const searchRegionSelect = document.getElementById('search-region');
+const searchTownSelect = document.getElementById('search-town');
+const searchSubmitBtn = document.getElementById('search-submit-btn');
+const townResults = document.getElementById('town-results');
+const townResultsTitle = document.getElementById('town-results-title');
+const townCatChips = document.getElementById('town-cat-chips');
+const townListingGrid = document.getElementById('town-listing-grid');
+
+Object.keys(NAMIBIA_REGIONS).forEach(region => {
+  const opt = document.createElement('option');
+  opt.value = region; opt.textContent = region;
+  searchRegionSelect.appendChild(opt);
+});
+function refreshSearchTowns(){
+  searchTownSelect.innerHTML = '';
+  const towns = NAMIBIA_REGIONS[searchRegionSelect.value] || [];
+  towns.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t; opt.textContent = t;
+    searchTownSelect.appendChild(opt);
+  });
+}
+searchRegionSelect.addEventListener('change', refreshSearchTowns);
+refreshSearchTowns();
+
+let townActiveCat = 'all';
+
+function renderTownResults(town){
+  townResultsTitle.textContent = `Businesses in ${town}`;
+
+  // Only categories that actually have a listing in this town get a chip.
+  const matchingCats = categories.filter(cat =>
+    cat.listings.some(l => (l.loc || '').split(',')[0].trim() === town)
+  );
+
+  townActiveCat = 'all';
+  townCatChips.innerHTML = '';
+  const allChip = document.createElement('div');
+  allChip.className = 'town-cat-chip active';
+  allChip.textContent = 'All';
+  allChip.addEventListener('click', () => {
+    townActiveCat = 'all';
+    townCatChips.querySelectorAll('.town-cat-chip').forEach(c => c.classList.remove('active'));
+    allChip.classList.add('active');
+    renderTownListings(town);
+  });
+  townCatChips.appendChild(allChip);
+
+  matchingCats.forEach(cat => {
+    const chip = document.createElement('div');
+    chip.className = 'town-cat-chip';
+    chip.textContent = `${cat.icon} ${cat.title}`;
+    chip.addEventListener('click', () => {
+      townActiveCat = cat.id;
+      townCatChips.querySelectorAll('.town-cat-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      renderTownListings(town);
+    });
+    townCatChips.appendChild(chip);
+  });
+
+  renderTownListings(town);
+
+  mainView.classList.add('hidden');
+  detail.classList.remove('active');
+  business.classList.remove('active');
+  townResults.classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function renderTownListings(town){
+  townListingGrid.innerHTML = '';
+  let found = 0;
+  categories.forEach(cat => {
+    if(townActiveCat !== 'all' && cat.id !== townActiveCat) return;
+    cat.listings.forEach(item => {
+      if((item.loc || '').split(',')[0].trim() !== town) return;
+      townListingGrid.appendChild(makeListingCard(cat, item));
+      found++;
+    });
+  });
+  if(!found){
+    const note = document.createElement('div');
+    note.className = 'empty-note';
+    note.textContent = `No listings in ${town} yet for this filter — check back as we onboard more businesses.`;
+    townListingGrid.appendChild(note);
+  }
+}
+
+searchSubmitBtn.addEventListener('click', () => {
+  renderTownResults(searchTownSelect.value);
+});
+
+document.getElementById('town-back-btn').addEventListener('click', () => {
+  townResults.classList.remove('active');
+  mainView.classList.remove('hidden');
+  window.scrollTo(0,0);
+});
 </script>
 
 </body>
