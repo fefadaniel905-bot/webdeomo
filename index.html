@@ -548,6 +548,12 @@
   }
   .field-input:focus, .field-select:focus{outline:none; border-color:var(--blue);}
   .field-hint{font-size:11px; color:var(--gray); margin-top:6px;}
+  #join-desc-count{font-size:11px; font-weight:400; color:var(--gray); text-transform:none; letter-spacing:0;}
+  .ai-help-btn{
+    margin-top:8px; background:rgba(37,99,235,.12); border:1px solid rgba(37,99,235,.3);
+    color:var(--blue-light); font-size:11.5px; font-weight:600;
+    padding:8px 14px; border-radius:var(--radius-pill);
+  }
   .accom-fields-row{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
   .accom-mini-label{font-size:11px; color:var(--gray); margin-bottom:5px;}
   .field-error{
@@ -852,6 +858,12 @@
         <input class="field-input" type="text" id="join-name" placeholder="e.g. Mama Kapana Rundu">
       </div>
       <div class="field-group">
+        <label class="field-label">Brief Description <span id="join-desc-count">(0/10 words)</span></label>
+        <input class="field-input" type="text" id="join-description" placeholder="e.g. Fresh kapana grilled daily, cash or EFT">
+        <div class="field-hint">One short line customers see first. Max 10 words.</div>
+        <button type="button" class="ai-help-btn" id="ai-help-btn">✨ Help me write this</button>
+      </div>
+      <div class="field-group">
         <label class="field-label">Category</label>
         <div class="cat-pick-grid" id="join-cat-grid"></div>
         <div class="field-error" id="join-error" style="display:none;"></div>
@@ -1110,7 +1122,7 @@ const categories = [
   },
   {
     id: 'delivery', icon: '🚚', title: 'Delivery & Logistics',
-    desc: 'Order delivery across town', status: 'plan', statusLabel: 'Planned',
+    desc: 'Order delivery across town', status: 'plan', statusLabel: 'Not Yet Available',
     listings: [
       {name:'Yango integration', loc:'Pending introduction', price:'Delivery on Shops & Food orders', kind:'placeholder', icon:'🛵'},
     ],
@@ -1275,9 +1287,13 @@ function makeListingCard(cat, item){
   const card = document.createElement('div');
   card.className = 'listing-card' + (item.featured ? ' is-featured' : '');
   const isVerified = item.kind === 'verified';
+  const hasPhoto = item.photos && item.photos.length && item.photos[0].startsWith('blob:');
+  const photoHTML = hasPhoto
+    ? `<div class="listing-photo ${isVerified ? '' : 'soon'}" style="background-image:url('${item.photos[0]}'); background-size:cover; background-position:center;"></div>`
+    : `<div class="listing-photo ${isVerified ? '' : 'soon'}">${item.icon}</div>`;
   card.innerHTML = `
     ${item.featured ? `<span class="featured-tag">🔥 Featured</span>` : ''}
-    <div class="listing-photo ${isVerified ? '' : 'soon'}">${item.icon}</div>
+    ${photoHTML}
     <div class="listing-body">
       <h4>${item.name}</h4>
       <div class="listing-loc">${item.loc}</div>
@@ -1478,9 +1494,16 @@ function openBusiness(cat, item){
   bizGallery.innerHTML = '';
   if(item.photos && item.photos.length){
     const [cover, ...rest] = item.photos;
+    const isRealPhoto = cover.startsWith('blob:') || cover.startsWith('data:') || cover.startsWith('http');
     const coverEl = document.createElement('div');
     coverEl.className = 'biz-gallery-cover';
-    coverEl.textContent = cover;
+    if(isRealPhoto){
+      coverEl.style.backgroundImage = `url('${cover}')`;
+      coverEl.style.backgroundSize = 'cover';
+      coverEl.style.backgroundPosition = 'center';
+    } else {
+      coverEl.textContent = cover;
+    }
     bizGallery.appendChild(coverEl);
     if(rest.length){
       const grid = document.createElement('div');
@@ -1488,7 +1511,13 @@ function openBusiness(cat, item){
       rest.forEach(p => {
         const thumb = document.createElement('div');
         thumb.className = 'biz-gallery-thumb';
-        thumb.textContent = p;
+        if(isRealPhoto){
+          thumb.style.backgroundImage = `url('${p}')`;
+          thumb.style.backgroundSize = 'cover';
+          thumb.style.backgroundPosition = 'center';
+        } else {
+          thumb.textContent = p;
+        }
         grid.appendChild(thumb);
       });
       bizGallery.appendChild(grid);
@@ -1608,6 +1637,44 @@ const joinError = document.getElementById('join-error');
 const joinRegionSelect = document.getElementById('join-region');
 const joinTownSelect = document.getElementById('join-town');
 const joinNameInput = document.getElementById('join-name');
+const joinDescriptionInput = document.getElementById('join-description');
+const joinDescCount = document.getElementById('join-desc-count');
+
+joinDescriptionInput.addEventListener('input', () => {
+  const words = joinDescriptionInput.value.trim().split(/\s+/).filter(Boolean);
+  joinDescCount.textContent = `(${words.length}/10 words)`;
+  joinDescCount.style.color = words.length > 10 ? '#F87171' : '';
+});
+
+// ---- "Help me write this" — a simple, honest description assistant ----
+// This is rule-based text shaping, NOT a real AI call. A genuine AI-generated
+// version needs a server-side route calling an AI API with a securely stored
+// key — that can't safely run in this static HTML file. This gives 3
+// reasonable starting options from what they typed, clearly labeled as such.
+document.getElementById('ai-help-btn').addEventListener('click', () => {
+  const raw = prompt("Explain your business in your own words (a sentence or two):");
+  if(!raw || !raw.trim()) return;
+
+  const words = raw.trim().replace(/[.\n]+/g, ' ').split(/\s+/).filter(Boolean);
+  const firstSix = words.slice(0, 6).join(' ');
+  const keyWord = words.find(w => w.length > 4) || words[0] || 'quality service';
+
+  const options = [
+    `${firstSix}${words.length > 6 ? '...' : ''}`,
+    `Trusted for ${keyWord.toLowerCase()}, here in Namibia`,
+    `Quality ${keyWord.toLowerCase()}, fast WhatsApp ordering`,
+  ].map(s => s.split(/\s+/).slice(0, 10).join(' '));
+
+  const choice = prompt(
+    "Here are 3 short options (this is simple text shaping, not real AI — reply 1, 2, or 3):\n\n" +
+    `1) ${options[0]}\n2) ${options[1]}\n3) ${options[2]}`
+  );
+  const picked = options[parseInt(choice, 10) - 1];
+  if(picked){
+    joinDescriptionInput.value = picked;
+    joinDescriptionInput.dispatchEvent(new Event('input'));
+  }
+});
 const joinWhatsappInput = document.getElementById('join-whatsapp');
 
 // ---- Business photo picker (demo: real file selection + local preview,
@@ -1728,7 +1795,34 @@ function renderJoinStep(){
   joinNextBtn.textContent = joinStep === 3 ? 'Submit' : 'Continue';
 }
 
+let preJoinContext = null;
+let joinDoneTarget = null;
+
+// Opens a category and re-applies a specific region/town filter — used to
+// return someone to exactly where they were browsing after they join.
+function openCategoryWithFilter(catId, region, town){
+  openCategory(catId);
+  if(region && region !== 'All Namibia'){
+    currentRegion = region;
+    regionFilter.querySelectorAll('.loc-chip').forEach(c => c.classList.toggle('active', c.textContent === region));
+    renderTowns(region);
+    if(town){
+      currentTown = town;
+      townFilter.querySelectorAll('.loc-chip').forEach(c => c.classList.toggle('active', c.textContent === town));
+    }
+    renderCategoryListings();
+  }
+}
+
 function openJoin(){
+  // Remember exactly where they were browsing, so finishing the join flow
+  // can send them back there instead of just the homepage.
+  if(detail.classList.contains('active') && currentCat){
+    preJoinContext = { catId: currentCat.id, region: currentRegion, town: currentTown };
+  } else {
+    preJoinContext = null;
+  }
+
   detail.classList.remove('active');
   business.classList.remove('active');
   mainView.classList.add('hidden');
@@ -1740,6 +1834,9 @@ function openJoin(){
   joinCatGrid.querySelectorAll('.cat-pick').forEach(el => el.classList.remove('selected'));
   joinNameInput.value = '';
   joinWhatsappInput.value = '';
+  joinDescriptionInput.value = '';
+  joinDescCount.textContent = '(0/10 words)';
+  joinDescCount.style.color = '';
   joinError.style.display = 'none';
   joinAccomFields.style.display = 'none';
   joinRoomsTotal.value = '';
@@ -1839,18 +1936,31 @@ joinNextBtn.addEventListener('click', () => {
       joinError.textContent = `⚠️ Please add at least ${MIN_JOIN_PHOTOS} photos before submitting (${joinPhotos.length}/${MIN_JOIN_PHOTOS}).`;
       return;
     }
+
+    // Rule 4: brief description is mandatory, max 10 words.
+    const descWords = joinDescriptionInput.value.trim().split(/\s+/).filter(Boolean);
+    if(descWords.length === 0){
+      joinError.style.display = 'block';
+      joinError.textContent = '⚠️ Please write a brief description of your business (max 10 words).';
+      return;
+    }
+    if(descWords.length > 10){
+      joinError.style.display = 'block';
+      joinError.textContent = `⚠️ Description is ${descWords.length} words — please shorten it to 10 words or fewer.`;
+      return;
+    }
     joinError.style.display = 'none';
 
-    // Final step — the demo has no backend, so this is the real notification path:
-    // it builds a pre-filled WhatsApp message to allinone trust's own number.
-    // The applicant taps Send in their own WhatsApp — no server, no database, no signup needed,
-    // and it matches how this business already operates end-to-end.
+    // Final step — the demo has no real backend/database, so this is the real
+    // notification path: it builds a pre-filled WhatsApp message to allinone
+    // trust's own number. The applicant taps Send in their own WhatsApp.
     const name = joinNameInput.value.trim() || 'Unnamed business';
     const catObj = categories.find(c => c.id === joinSelectedCat);
     const catLabel = catObj ? `${catObj.icon} ${catObj.title}` : 'Not selected';
     const region = joinRegionSelect.value || 'Not selected';
     const town = joinTownSelect.value || 'Not selected';
     const whatsapp = joinWhatsappInput.value.trim() || 'Not provided';
+    const description = joinDescriptionInput.value.trim();
     const roomsLine = joinSelectedCat === 'accommodation'
       ? `\nRooms/Houses: ${joinRoomsTotal.value} total, ${joinRoomsBooked.value} booked (${joinRoomsTotal.value - joinRoomsBooked.value} available)`
       : '';
@@ -1860,24 +1970,64 @@ joinNextBtn.addEventListener('click', () => {
 Business: ${name}
 Category: ${catLabel}
 Location: ${town}, ${region}
-Contact WhatsApp: ${whatsapp}${roomsLine}
+Contact WhatsApp: ${whatsapp}
+Description: ${description}${roomsLine}
 Photos selected: ${joinPhotos.length} (attach separately in this chat — photos can't attach automatically)`;
 
     // allinone trust's own WhatsApp number, international format: 264 85 775 8227
     const OWNER_WHATSAPP = '264857758227';
     joinWhatsappSendBtn.href = `https://wa.me/${OWNER_WHATSAPP}?text=${encodeURIComponent(message)}`;
 
+    // ---- Push this into the actual browsable data, for THIS browser session only ----
+    // This is what makes "browse and see it" work immediately after joining —
+    // but it resets the moment the page is reloaded or closed, since there's
+    // still no real database. A real submission that survives a refresh needs
+    // the Supabase backend already built separately for the real site.
+    if(catObj){
+      const newListing = {
+        name: name,
+        loc: `${town}, ${region}`,
+        price: description,
+        kind: 'verified',
+        icon: catObj.icon,
+        isReal: true,
+        about: description,
+        photos: joinPhotos.map(p => p.url),
+      };
+      if(joinSelectedCat === 'accommodation'){
+        const total = parseInt(joinRoomsTotal.value, 10);
+        const booked = parseInt(joinRoomsBooked.value, 10);
+        const available = total - booked;
+        newListing.availability = {
+          status: available === 0 ? 'full' : available <= 1 ? 'limited' : 'available',
+          detail: available === 0 ? 'Fully booked' : `${available} of ${total} available`,
+          count: available,
+          unit: 'room',
+        };
+      }
+      catObj.listings.push(newListing);
+      updateHeroStats(); // "Businesses live" / "Regions covered" update immediately
+    }
+
     joinPanels.forEach(p => p.classList.remove('active'));
     joinNav.style.display = 'none';
-    joinConfirmText.textContent = `One more tap — send this on WhatsApp so we actually receive it, then attach your ${joinPhotos.length} photos to that same chat (this demo can't send them automatically — there's no database or storage behind it yet).`;
+    joinConfirmText.textContent = `You're now listed under ${catLabel} in ${town} for this session — tap "Done" to go see it. Also send this on WhatsApp so we actually receive your application, then attach your ${joinPhotos.length} photos to that same chat.`;
     joinConfirm.classList.add('active');
+    joinDoneTarget = { catId: joinSelectedCat, region, town };
   }
 });
 
 joinDoneBtn.addEventListener('click', () => {
   join.classList.remove('active');
-  mainView.classList.remove('hidden');
-  window.scrollTo(0,0);
+  if(joinDoneTarget){
+    openCategoryWithFilter(joinDoneTarget.catId, joinDoneTarget.region, joinDoneTarget.town);
+    joinDoneTarget = null;
+  } else if(preJoinContext){
+    openCategoryWithFilter(preJoinContext.catId, preJoinContext.region, preJoinContext.town);
+  } else {
+    mainView.classList.remove('hidden');
+    window.scrollTo(0,0);
+  }
 });
 
 // ---- Contact modal (secondary option next to WhatsApp — not a replacement) ----
