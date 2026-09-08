@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Photo Picker Test</title>
+<style>
+  body{background:#111827; color:#fff; font-family:sans-serif; padding:30px 20px; text-align:center;}
+  label{
+    display:block; border:3px dashed #2563EB; border-radius:16px;
+    padding:40px 20px; margin:20px 0; font-size:16px; cursor:pointer;
+  }
+  #result{margin-top:20px; font-size:14px; color:#4ADE80; white-space:pre-wrap;}
+  img{max-width:150px; border-radius:10px; margin-top:15px;}
+</style>
+</head>
+<body>
+  <h2>Photo Picker Test</h2>
+  <p>Tap the box below. If a picker opens and you can select a photo, it'll show below.</p>
+
+  <label for="test-input">📷 TAP HERE TO TEST</label>
+  <input type="file" id="test-input" accept="image/*" style="display:none;">
+
+  <div id="result">Waiting for you to tap above...</div>
+
+  <script>
+    document.getElementById('test-input').addEventListener('change', function(e){
+      const file = e.target.files[0];
+      const result = document.getElementById('result');
+      if(file){
+        result.textContent = '✅ IT WORKED! File picked: ' + file.name + ' (' + Math.round(file.size/1024) + ' KB)';
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        result.appendChild(document.createElement('br'));
+        result.appendChild(img);
+      } else {
+        result.textContent = '❌ Picker opened but nothing was selected.';
+      }
+    });
+  </script>
+</body>
+</html>
