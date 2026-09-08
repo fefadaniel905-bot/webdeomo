@@ -1,4 +1,4 @@
-# WEBDEOMO
+# webdeomo
 
 Everything built across our conversation, in one place. This is NOT a runnable
 project on its own — these are files meant to be dropped into your existing
